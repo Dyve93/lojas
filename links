@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Meus Links — Linkhub</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1230; --muted:#a6b0c3; --accent:#60a5fa; --btn:#15233a;
+      --glass: rgba(255,255,255,0.03);
+    }
+    [data-theme="light"]{ --bg:#f4f6fb; --card:#ffffff; --muted:#556074; --accent:#2563eb; --btn:#eef4ff; --glass: rgba(0,0,0,0.04); }
+    *{box-sizing:border-box}
+    body{font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin:0; min-height:100vh; background:linear-gradient(180deg,var(--bg), #071029); color:var(--muted); -webkit-font-smoothing:antialiased}
+    .wrap{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px}
+    .card{width:100%; max-width:520px; background:var(--card); border-radius:14px; padding:28px; box-shadow:0 8px 30px rgba(2,6,23,0.6);}
+    header{display:flex; gap:16px; align-items:center; margin-bottom:18px}
+    .avatar{width:72px;height:72px;border-radius:12px;background:linear-gradient(135deg,var(--accent), #7dd3fc); display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:26px}
+    .profile{flex:1}
+    .profile h1{margin:0;font-size:18px;color:white}
+    .profile p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+    .controls{display:flex;gap:8px}
+    .btn{background:var(--btn); color:var(--muted); border:0;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+    .btn.primary{background:linear-gradient(90deg,var(--accent), #34d399); color:#fff}
+    .form{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:16px}
+    .form input{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit}
+    .links{display:flex;flex-direction:column;gap:10px}
+    .link-item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); cursor:grab}
+    .link-left{display:flex;align-items:center;gap:12px;flex:1}
+    .icon{width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-size:18px}
+    .link-meta{display:flex;flex-direction:column}
+    .link-meta strong{color:white}
+    .link-meta small{font-size:12px;color:var(--muted)}
+    .link-actions{display:flex;gap:8px}
+    .tiny{padding:6px 8px;border-radius:8px;font-size:13px}
+    .muted{color:var(--muted)}
+    .hint{font-size:13px;color:var(--muted);text-align:center;margin-top:12px}
+    footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+    .ghost{background:transparent;border:1px dashed rgba(255,255,255,0.04);padding:8px;border-radius:10px}
+    .hidden{display:none}
+    @media (max-width:520px){.card{padding:18px}.avatar{width:62px;height:62px}}
+    /* drag placeholder */
+    .dragging{opacity:0.6}
+    .placeholder{height:56px;border:2px dashed rgba(255,255,255,0.06);border-radius:10px}
+  </style>
+</head>
+<body data-theme="dark">
+  <div class="wrap">
+    <div class="card" id="app">
+      <header>
+        <div class="avatar" id="avatar">DV</div>
+        <div class="profile">
+          <h1 id="title">Meus links</h1>
+          <p id="subtitle">Links rápidos e atalhos do meu PC</p>
+        </div>
+        <div class="controls">
+          <button class="btn" id="themeToggle" title="Alternar tema">🌗</button>
+          <button class="btn" id="exportBtn" title="Exportar JSON">Exportar</button>
+        </div>
+      </header>
+
+      <div class="form">
+        <input id="name" placeholder="Nome (ex: Drive, Spotify, Pasta Projetos)" />
+        <input id="url" placeholder="URL, caminho ou comando (ex: https://drive.google.com ou C:\\Users\\Diego)" />
+        <button class="btn primary" id="addBtn">+ Adicionar</button>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input id="search" placeholder="Buscar..." style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:var(--glass)" />
+        <button class="btn" id="importBtn">Importar</button>
+      </div>
+
+      <div class="links" id="linksList">
+        <!-- itens gerados aqui -->
+      </div>
+
+      <div class="hint">Arraste os itens para reordenar. Tudo salvo automaticamente no seu navegador.</div>
+
+      <footer>
+        <small class="muted">LocalStorage • Linkhub</small>
+        <div>
+          <button class="btn tiny" id="clearBtn">Limpar tudo</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <template id="linkTpl">
+    <div class="link-item" draggable="true">
+      <div class="link-left">
+        <div class="icon">🔗</div>
+        <div class="link-meta">
+          <strong>Nome</strong>
+          <small>Url</small>
+        </div>
+      </div>
+      <div class="link-actions">
+        <button class="btn tiny openBtn" title="Abrir">Abrir</button>
+        <button class="btn tiny editBtn" title="Editar">Editar</button>
+        <button class="btn tiny" title="Copiar" id="copyBtn">Copiar</button>
+        <button class="btn tiny" title="Excluir">Excluir</button>
+      </div>
+    </div>
+  </template>
+
+  <input type="file" id="fileInput" class="hidden" accept="application/json" />
+
+  <script>
+    // App simples de links com localStorage, edição e drag-and-drop
+    const LS_KEY = 'linkhub_links_v1';
+    let links = [];
+
+    // elementos
+    const nameIn = document.getElementById('name');
+    const urlIn = document.getElementById('url');
+    const addBtn = document.getElementById('addBtn');
+    const linksList = document.getElementById('linksList');
+    const tpl = document.getElementById('linkTpl');
+    const search = document.getElementById('search');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const fileInput = document.getElementById('fileInput');
+    const clearBtn = document.getElementById('clearBtn');
+    const themeToggle = document.getElementById('themeToggle');
+
+    // init
+    function load(){
+      try{
+        links = JSON.parse(localStorage.getItem(LS_KEY)) || sampleLinks();
+      }catch(e){links = sampleLinks()}
+      render();
+    }
+
+    function sampleLinks(){
+      return [
+        {id:id(),name:'Google Drive',url:'https://drive.google.com',icon:'🗂'},
+        {id:id(),name:'YouTube',url:'https://youtube.com',icon:'▶️'},
+        {id:id(),name:'Spotify',url:'https://open.spotify.com',icon:'🎧'},
+        {id:id(),name:'Pastas Projetos',url:'file:///C:/Users/Public/Projects',icon:'📁'},
+      ];
+    }
+
+    function save(){
+      localStorage.setItem(LS_KEY, JSON.stringify(links));
+    }
+
+    function id(){return Math.random().toString(36).slice(2,9)}
+
+    function render(filter=''){
+      linksList.innerHTML='';
+      const q = filter.trim().toLowerCase();
+      links.forEach(item=>{
+        if(q && !(item.name.toLowerCase().includes(q) || (item.url||'').toLowerCase().includes(q))) return;
+        const node = tpl.content.firstElementChild.cloneNode(true);
+        node.dataset.id = item.id;
+        node.querySelector('.icon').textContent = item.icon || '🔗';
+        node.querySelector('strong').textContent = item.name;
+        node.querySelector('small').textContent = item.url;
+        // actions
+        node.querySelector('.openBtn').addEventListener('click', ()=>openLink(item.url));
+        node.querySelector('.editBtn').addEventListener('click', ()=>startEdit(item.id));
+        node.querySelector('#copyBtn').addEventListener('click', ()=>copyText(item.url));
+        node.querySelector('.btn[title="Excluir"]').addEventListener('click', ()=>remove(item.id));
+        // drag events
+        node.addEventListener('dragstart', dragStart);
+        node.addEventListener('dragover', dragOver);
+        node.addEventListener('drop', drop);
+        node.addEventListener('dragend', dragEnd);
+
+        linksList.appendChild(node);
+      })
+    }
+
+    function openLink(url){
+      // if looks like a file path on Windows (starts with C:\ or file:///), try to open in new tab as file URL
+      if(/^([a-zA-Z]:\\|\\\\|file:\/\/)/.test(url) || url.startsWith('file:///')){
+        // create a blob that redirects — browsers usually block local file access, so we open a small page that shows the path
+        const html = `<meta charset=\"utf-8\"><p>Link local: <b>${escapeHtml(url)}</b></p>`;
+        const blob = new Blob([html], {type:'text/html'});
+        const u = URL.createObjectURL(blob);
+        window.open(u,'_blank');
+      } else {
+        window.open(url, '_blank');
+      }
+    }
+
+    function escapeHtml(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function copyText(t){ navigator.clipboard.writeText(t).then(()=>alert('Copiado para a área de transferência')) }
+
+    addBtn.addEventListener('click', ()=>{
+      const name = nameIn.value.trim();
+      const url = urlIn.value.trim();
+      if(!name || !url) return alert('Preencha nome e url/caminho');
+      links.unshift({id:id(),name, url, icon:guessIcon(name,url)});
+      save(); render(); nameIn.value=''; urlIn.value='';
+    })
+
+    function guessIcon(name,url){
+      if(/drive|disk/i.test(name)) return '🗂';
+      if(/youtube/i.test(name)) return '▶️';
+      if(/spotify/i.test(name)) return '🎧';
+      if(/git|github/i.test(name)) return '🐙';
+      if(/^https?:\/\//.test(url)) return '🌐';
+      if(/^file:\/\//.test(url) || /^[a-zA-Z]:\\\\/.test(url)) return '📁';
+      return '🔗';
+    }
+
+    function startEdit(id){
+      const item = links.find(x=>x.id===id); if(!item) return;
+      const newName = prompt('Editar nome', item.name); if(newName===null) return;
+      const newUrl = prompt('Editar url/caminho', item.url); if(newUrl===null) return;
+      item.name = newName.trim() || item.name; item.url = newUrl.trim() || item.url; save(); render(search.value);
+    }
+
+    function remove(id){ if(!confirm('Excluir este link?')) return; links = links.filter(x=>x.id!==id); save(); render(search.value); }
+
+    search.addEventListener('input', ()=>render(search.value));
+
+    // export/import
+    exportBtn.addEventListener('click', ()=>{
+      const data = JSON.stringify(links, null, 2);
+      const blob = new Blob([data], {type:'application/json'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'linkhub_export.json'; a.click();
+    });
+
+    importBtn.addEventListener('click', ()=>fileInput.click());
+    fileInput.addEventListener('change', (e)=>{
+      const f = e.target.files[0]; if(!f) return; const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const parsed = JSON.parse(reader.result);
+          if(!Array.isArray(parsed)) throw 'Formato inválido';
+          // normalize
+          links = parsed.map(x=>({id:x.id||id(), name:x.name||'Sem nome', url:x.url||'', icon:x.icon||'🔗'}));
+          save(); render();
+          alert('Importado com sucesso');
+        }catch(err){alert('Erro ao importar: '+err)}
+      }
+      reader.readAsText(f);
+    });
+
+    clearBtn.addEventListener('click', ()=>{ if(confirm('Limpar todos os links?')){ links=[]; save(); render(); } });
+
+    // drag/drop reordering
+    let dragEl=null;
+    function dragStart(e){ dragEl = this; this.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; }
+    function dragOver(e){ e.preventDefault(); const over = this;
+      if(over===dragEl) return;
+      const rect = over.getBoundingClientRect(); const middle = rect.top + rect.height/2;
+      if(e.clientY < middle){ linksList.insertBefore(createPlaceholder(), over); }
+      else{ if(over.nextSibling) linksList.insertBefore(createPlaceholder(), over.nextSibling); else linksList.appendChild(createPlaceholder()); }
+    }
+    function createPlaceholder(){ const ph = document.createElement('div'); ph.className='placeholder'; return ph; }
+    function drop(e){ e.preventDefault(); const ph = linksList.querySelector('.placeholder'); if(!ph) return; linksList.removeChild(ph); // determine new index
+      const nodes = Array.from(linksList.children);
+      const ids = nodes.map(n=>n.dataset.id);
+      // remove dragged element from links
+      const draggedId = dragEl.dataset.id;
+      const draggedObj = links.find(x=>x.id===draggedId);
+      links = links.filter(x=>x.id!==draggedId);
+      // compute index
+      const index = nodes.indexOf(this);
+      // if cursor below middle, insert after
+      const rect = this.getBoundingClientRect();
+      const insertAfter = (e.clientY > rect.top + rect.height/2);
+      const targetIndex = index + (insertAfter?1:0);
+      links.splice(targetIndex,0,draggedObj);
+      save(); render();
+    }
+    function dragEnd(){ this.classList.remove('dragging'); const ph = linksList.querySelector('.placeholder'); if(ph) ph.remove(); dragEl=null }
+
+    // theme
+    themeToggle.addEventListener('click', ()=>{
+      const root = document.documentElement; if(root.getAttribute('data-theme')==='light'){ root.setAttribute('data-theme','dark'); localStorage.removeItem('linkhub_theme'); }
+      else{ root.setAttribute('data-theme','light'); localStorage.setItem('linkhub_theme','light'); }
+    });
+    // init theme by storage
+    if(localStorage.getItem('linkhub_theme')==='light') document.documentElement.setAttribute('data-theme','light');
+
+    // on load
+    load();
+
+    // helper: render after drag placeholder removal (fall back)
+    document.addEventListener('dragover', (e)=>{
+      // allow dropping on container
+      e.preventDefault();
+    });
+
+  </script>
+</body>
+</html>
