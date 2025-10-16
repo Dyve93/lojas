@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Simulador de Custos - Mercado (modelo)</title>
+  <style>
+    :root{font-family:Inter,system-ui,Arial,sans-serif}
+    body{margin:0;background:#f6f7fb;color:#1f2d3d;display:flex;align-items:flex-start;justify-content:center;padding:28px}
+    .card{width:100%;max-width:980px;background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(6,15,28,0.08);padding:20px}
+    h1{margin:0 0 12px;font-size:20px}
+    .grid{display:grid;grid-template-columns:1fr 320px;gap:18px}
+    .form{padding:6px}
+    label{display:block;font-size:13px;margin:10px 0 6px}
+    input[type="number"], select, input[type="text"]{width:100%;padding:10px;border-radius:8px;border:1px solid #e2e6ef;font-size:14px}
+    .row{display:flex;gap:10px}
+    .half{flex:1}
+    .actions{display:flex;gap:8px;margin-top:12px}
+    button{background:#0070f3;color:#fff;border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
+    button.ghost{background:#eef2ff;color:#172554}
+    .summary{padding:12px;border-radius:10px;background:#fbfbff;border:1px solid #eef1ff}
+    .line{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #eef2ff}
+    .line:last-child{border-bottom:0}
+    .big{font-size:18px;font-weight:700}
+    .small{font-size:12px;color:#55607a}
+    .note{font-size:13px;color:#6b7280;margin-top:8px}
+    footer{margin-top:12px;font-size:12px;color:#6b7280}
+    @media (max-width:880px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Simulador de Custos (modelo inspirado no Mercado Livre)</h1>
+    <div class="grid">
+      <div class="form">
+        <label>Preço de venda (R$)</label>
+        <input id="price" type="number" step="0.01" value="199.90">
+
+        <div class="row">
+          <div class="half">
+            <label>Custo do produto (R$)</label>
+            <input id="cost" type="number" step="0.01" value="60.00">
+          </div>
+          <div class="half">
+            <label>Frete (se for pago por você) (R$)</label>
+            <input id="shippingCost" type="number" step="0.01" value="15.00">
+          </div>
+        </div>
+
+        <label>Outros custos (embalagem, logística, etc.) (R$)</label>
+        <input id="otherCosts" type="number" step="0.01" value="5.00">
+
+        <label>Impostos / tributos (%)</label>
+        <input id="taxPercent" type="number" step="0.01" value="6.00">
+
+        <label>Tipo de anúncio</label>
+        <select id="adType">
+          <option value="classic">Clássico (menor comissão)</option>
+          <option value="premium">Premium (mais exposição, maior comissão)</option>
+        </select>
+
+        <label>Configurações (edite para ajustar taxas reais)</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input id="commissionPercent" type="number" step="0.01" value="12.00" placeholder="Comissão (%)">
+          <input id="fixedFee" type="number" step="0.01" value="0.00" placeholder="Tarifa fixa (R$)">
+        </div>
+
+        <label>Taxa do meio de pagamento (%)</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input id="mpPercent" type="number" step="0.01" value="4.99" placeholder="% Mercado Pago">
+          <input id="mpFixed" type="number" step="0.01" value="0.40" placeholder="Tarifa fixa (R$)">
+        </div>
+
+        <div class="actions">
+          <button id="calcBtn">Calcular</button>
+          <button id="saveBtn" class="ghost">Salvar configurações</button>
+          <button id="resetBtn" class="ghost">Resetar</button>
+        </div>
+
+        <p class="note">Observação: as taxas padrão são aproximadas — edite os campos de comissão e tarifas para refletir as condições reais do seu anúncio/plano. Esta ferramenta replica a lógica típica de simuladores de custos de marketplaces (comissão percentual, tarifa fixa por venda, custos de envio, taxas de pagamento e impostos). </p>
+      </div>
+
+      <div>
+        <div class="summary">
+          <div class="line"><div class="small">Preço de venda</div><div id="outPrice">R$ 0,00</div></div>
+          <div class="line"><div class="small">Comissão do marketplace</div><div id="outCommission">R$ 0,00</div></div>
+          <div class="line"><div class="small">Tarifa fixa por venda</div><div id="outFixed">R$ 0,00</div></div>
+          <div class="line"><div class="small">Taxa Mercado Pago (percentual + fixa)</div><div id="outMP">R$ 0,00</div></div>
+          <div class="line"><div class="small">Frete pago pelo vendedor</div><div id="outShipping">R$ 0,00</div></div>
+          <div class="line"><div class="small">Outros custos</div><div id="outOther">R$ 0,00</div></div>
+          <div class="line"><div class="small">Impostos (sobre o valor líquido)</div><div id="outTaxes">R$ 0,00</div></div>
+          <div class="line big"><div>Valor líquido recebido</div><div id="outNet">R$ 0,00</div></div>
+          <div class="line"><div class="small">Lucro bruto (recebido - custo produto)</div><div id="outProfit">R$ 0,00</div></div>
+          <div class="line"><div class="small">Margem sobre venda</div><div id="outMargin">0%</div></div>
+        </div>
+
+        <div style="margin-top:12px;padding:12px;border-radius:10px;background:#fff;border:1px solid #f1f5f9">
+          <strong>Como funciona (resumo da lógica):</strong>
+          <ol style="padding-left:18px;margin:8px 0 0 0;font-size:13px;color:#4b5563">
+            <li>Calcula-se a comissão percentual sobre o preço de venda.</li>
+            <li>Soma-se tarifa fixa por unidade (se houver).</li>
+            <li>Calcula-se a taxa do meio de pagamento (percentual sobre preço + tarifa fixa).</li>
+            <li>Subtrai-se frete e outros custos pagos pelo vendedor.</li>
+            <li>Aplica-se impostos (percentual) sobre o valor líquido quando aplicável.</li>
+            <li>O resultado é o valor líquido estimado que o vendedor receberá.</li>
+          </ol>
+        </div>
+
+        <footer>
+          Ferramenta criada como modelo; verifique as taxas reais no site do Mercado Livre para valores atualizados.
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Helpers
+    const $ = id => document.getElementById(id);
+    const money = v => 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+    function loadSettings(){
+      const s = JSON.parse(localStorage.getItem('ml-sim-settings')||'{}');
+      if(Object.keys(s).length){
+        ['price','cost','shippingCost','otherCosts','taxPercent','commissionPercent','fixedFee','mpPercent','mpFixed'].forEach(k=>{if(s[k]!==undefined)$(k).value=s[k]});
+        $('adType').value = s.adType || 'classic';
+      }
+    }
+
+    function saveSettings(){
+      const keys = ['price','cost','shippingCost','otherCosts','taxPercent','commissionPercent','fixedFee','mpPercent','mpFixed','adType'];
+      const s={}; keys.forEach(k=>s[k]=$(k).value); localStorage.setItem('ml-sim-settings',JSON.stringify(s));
+      alert('Configurações salvas no localStorage.');
+    }
+
+    function resetDefaults(){
+      localStorage.removeItem('ml-sim-settings'); location.reload();
+    }
+
+    function calculate(){
+      const price = parseFloat($('price').value)||0;
+      const cost = parseFloat($('cost').value)||0;
+      const shippingCost = parseFloat($('shippingCost').value)||0;
+      const otherCosts = parseFloat($('otherCosts').value)||0;
+      const taxPercent = parseFloat($('taxPercent').value)||0;
+      const commissionPercent = parseFloat($('commissionPercent').value)||0;
+      const fixedFee = parseFloat($('fixedFee').value)||0;
+      const mpPercent = parseFloat($('mpPercent').value)||0;
+      const mpFixed = parseFloat($('mpFixed').value)||0;
+
+      // Commission (marketplace)
+      const commission = (commissionPercent/100)*price;
+      // Payment gateway
+      const mpFee = (mpPercent/100)*price + mpFixed;
+      // Taxes: here we apply taxes over (price - commission - mpFee - fixedFee)
+      const taxableBase = Math.max(0, price - commission - mpFee - fixedFee);
+      const taxes = (taxPercent/100)*taxableBase;
+
+      // Net received: price - commission - fixedFee - mpFee - shippingCost - otherCosts - taxes
+      const net = price - commission - fixedFee - mpFee - shippingCost - otherCosts - taxes;
+
+      // Profit
+      const profit = net - cost;
+      const margin = price>0 ? (profit/price)*100 : 0;
+
+      $('outPrice').innerText = money(price);
+      $('outCommission').innerText = money(commission);
+      $('outFixed').innerText = money(fixedFee);
+      $('outMP').innerText = money(mpFee);
+      $('outShipping').innerText = money(shippingCost);
+      $('outOther').innerText = money(otherCosts);
+      $('outTaxes').innerText = money(taxes);
+      $('outNet').innerText = money(net);
+      $('outProfit').innerText = money(profit);
+      $('outMargin').innerText = margin.toFixed(2) + '%';
+    }
+
+    document.getElementById('calcBtn').addEventListener('click', calculate);
+    document.getElementById('saveBtn').addEventListener('click', saveSettings);
+    document.getElementById('resetBtn').addEventListener('click', resetDefaults);
+
+    // Auto calculate on enter fields
+    document.querySelectorAll('input,select').forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();calculate()}}));
+
+    // load and initial calc
+    loadSettings(); calculate();
+  </script>
+</body>
+</html>

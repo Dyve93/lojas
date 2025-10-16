@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gerador EAN-13 Brasil</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #28a745;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 8px 20px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 8px 20px rgba(220, 53, 69, 0.3);
+        }
+
+        .results {
+            margin-top: 30px;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .results h2 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .counter {
+            background: #28a745;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .codes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            max-height: 600px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+
+        .code-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .code-item:hover {
+            background: #e3f2fd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .export-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .codes-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 10px;
+            }
+            
+            .results-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🇧🇷 Gerador EAN-13 Brasil</h1>
+            <p>Gerador profissional de códigos de barras EAN-13 para produtos brasileiros</p>
+        </div>
+
+        <div class="content">
+            <form id="eanForm">
+                <div class="form-group">
+                    <label for="cnpj">CNPJ da Empresa (apenas números):</label>
+                    <input type="text" id="cnpj" placeholder="Digite seu CNPJ (ex: 12345678000195)" maxlength="14">
+                </div>
+
+                <div class="form-group">
+                    <label for="quantity">Quantidade de códigos (1-1000):</label>
+                    <input type="number" id="quantity" value="500" min="1" max="1000">
+                </div>
+
+                <button type="submit" class="btn">
+                    ⚡ Gerar Códigos EAN-13
+                </button>
+            </form>
+
+            <div id="results" class="results" style="display: none;">
+                <div class="results-header">
+                    <h2>📦 Códigos Gerados</h2>
+                    <div class="counter" id="counter">0 códigos</div>
+                </div>
+                
+                <div class="export-options">
+                    <button onclick="exportToCSV()" class="btn btn-secondary">
+                        📊 Exportar CSV
+                    </button>
+                    <button onclick="exportToTXT()" class="btn btn-secondary">
+                        📄 Exportar TXT
+                    </button>
+                    <button onclick="openSaveModal()" class="btn">
+                        💾 Salvar Lista
+                    </button>
+                    <button onclick="clearCodes()" class="btn btn-danger">
+                        🗑️ Limpar
+                    </button>
+                </div>
+
+                <div id="codesGrid" class="codes-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para salvar -->
+    <div id="saveModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSaveModal()">&times;</span>
+            <h2>💾 Salvar Lista de Códigos</h2>
+            <div class="form-group">
+                <label for="listName">Nome da Lista:</label>
+                <input type="text" id="listName" placeholder="Ex: Produtos Lote 2024-001">
+            </div>
+            <button onclick="saveToMemory()" class="btn">Salvar em Memória</button>
+            <button onclick="loadFromMemory()" class="btn btn-secondary">Carregar Lista</button>
+            
+            <div id="successMessage" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Armazenamento em memória (substitui localStorage)
+        let memoryStorage = {};
+        let currentCodes = [];
+
+        // Função para validar CNPJ (simplificada)
+        function validateCNPJ(cnpj) {
+            cnpj = cnpj.replace(/\D/g, '');
+            return cnpj.length === 14 && /^\d{14}$/.test(cnpj);
+        }
+
+        // Função para calcular dígito verificador EAN-13
+        function calculateEAN13CheckDigit(code) {
+            let sum = 0;
+            for (let i = 0; i < 12; i++) {
+                const digit = parseInt(code[i]);
+                sum += (i % 2 === 0) ? digit : digit * 3;
+            }
+            return (10 - (sum % 10)) % 10;
+        }
+
+        // Função para gerar código EAN-13 brasileiro
+        function generateEAN13(cnpj, sequence) {
+            // Código do país Brasil: 789
+            let code = '789';
+            
+            // Usar últimos 6 dígitos do CNPJ como identificador da empresa
+            const companyCode = cnpj.slice(-6);
+            code += companyCode;
+            
+            // Número sequencial do produto (3 dígitos)
+            const productCode = sequence.toString().padStart(3, '0');
+            code += productCode;
+            
+            // Calcular dígito verificador
+            const checkDigit = calculateEAN13CheckDigit(code);
+            code += checkDigit;
+            
+            return code;
+        }
+
+        // Função principal de geração
+        function generateCodes() {
+            const cnpjInput = document.getElementById('cnpj').value.replace(/\D/g, '');
+            const quantity = parseInt(document.getElementById('quantity').value);
+
+            if (!validateCNPJ(cnpjInput)) {
+                alert('Por favor, insira um CNPJ válido com 14 dígitos.');
+                return;
+            }
+
+            if (quantity < 1 || quantity > 1000) {
+                alert('A quantidade deve estar entre 1 e 1000.');
+                return;
+            }
+
+            currentCodes = [];
+            const codesGrid = document.getElementById('codesGrid');
+            codesGrid.innerHTML = '';
+
+            // Gerar códigos
+            for (let i = 1; i <= quantity; i++) {
+                const code = generateEAN13(cnpjInput, i);
+                currentCodes.push(code);
+
+                // Criar elemento visual
+                const codeElement = document.createElement('div');
+                codeElement.className = 'code-item';
+                codeElement.textContent = code;
+                codeElement.onclick = () => copyToClipboard(code);
+                codeElement.title = 'Clique para copiar';
+                codesGrid.appendChild(codeElement);
+            }
+
+            // Mostrar resultados
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('counter').textContent = `${quantity} códigos`;
+            
+            // Scroll para os resultados
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Função para copiar código
+        function copyToClipboard(text) {
+            navigator.clipboard.then(() => {
+                navigator.clipboard.writeText(text);
+                showToast('Código copiado: ' + text);
+            }).catch(() => {
+                // Fallback para navegadores mais antigos
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('Código copiado: ' + text);
+            });
+        }
+
+        // Função para mostrar toast
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #28a745;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 5px;
+                z-index: 1001;
+                animation: slideInRight 0.3s ease;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Funções de exportação
+        function exportToCSV() {
+            if (currentCodes.length === 0) return;
+            
+            const csv = 'Codigo EAN-13\n' + currentCodes.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'codigos_ean13.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function exportToTXT() {
+            if (currentCodes.length === 0) return;
+            
+            const txt = currentCodes.join('\n');
+            const blob = new Blob([txt], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'codigos_ean13.txt';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Funções do modal
+        function openSaveModal() {
+            if (currentCodes.length === 0) {
+                alert('Gere códigos primeiro antes de salvar.');
+                return;
+            }
+            document.getElementById('saveModal').style.display = 'block';
+        }
+
+        function closeSaveModal() {
+            document.getElementById('saveModal').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        function saveToMemory() {
+            const listName = document.getElementById('listName').value.trim();
+            if (!listName) {
+                alert('Por favor, digite um nome para a lista.');
+                return;
+            }
+
+            memoryStorage[listName] = {
+                codes: [...currentCodes],
+                date: new Date().toLocaleString('pt-BR'),
+                count: currentCodes.length
+            };
+
+            const successDiv = document.getElementById('successMessage');
+            successDiv.innerHTML = `
+                <div class="success-message">
+                    ✅ Lista "${listName}" salva com sucesso!<br>
+                    ${currentCodes.length} códigos armazenados em memória.
+                </div>
+            `;
+            successDiv.style.display = 'block';
+        }
+
+        function loadFromMemory() {
+            const keys = Object.keys(memoryStorage);
+            if (keys.length === 0) {
+                alert('Nenhuma lista salva encontrada na memória.');
+                return;
+            }
+
+            const listName = prompt('Listas disponíveis:\n' + keys.map((key, i) => 
+                `${i+1}. ${key} (${memoryStorage[key].count} códigos - ${memoryStorage[key].date})`
+            ).join('\n') + '\n\nDigite o nome da lista para carregar:');
+
+            if (listName && memoryStorage[listName]) {
+                currentCodes = [...memoryStorage[listName].codes];
+                displayLoadedCodes();
+                closeSaveModal();
+                document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+            } else if (listName) {
+                alert('Lista não encontrada.');
+            }
+        }
+
+        function displayLoadedCodes() {
+            const codesGrid = document.getElementById('codesGrid');
+            codesGrid.innerHTML = '';
+
+            currentCodes.forEach(code => {
+                const codeElement = document.createElement('div');
+                codeElement.className = 'code-item';
+                codeElement.textContent = code;
+                codeElement.onclick = () => copyToClipboard(code);
+                codeElement.title = 'Clique para copiar';
+                codesGrid.appendChild(codeElement);
+            });
+
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('counter').textContent = `${currentCodes.length} códigos`;
+        }
+
+        function clearCodes() {
+            if (confirm('Tem certeza que deseja limpar todos os códigos gerados?')) {
+                currentCodes = [];
+                document.getElementById('results').style.display = 'none';
+                document.getElementById('codesGrid').innerHTML = '';
+            }
+        }
+
+        // Event listeners
+        document.getElementById('eanForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            generateCodes();
+        });
+
+        // Formatar CNPJ enquanto digita
+        document.getElementById('cnpj').addEventListener('input', function(e) {
+            this.value = this.value.replace(/\D/g, '');
+        });
+
+        // Fechar modal clicando fora
+        window.onclick = function(event) {
+            const modal = document.getElementById('saveModal');
+            if (event.target === modal) {
+                closeSaveModal();
+            }
+        };
+
+        // Adicionar estilos de animação
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

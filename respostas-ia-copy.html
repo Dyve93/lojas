@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Avaliação do Cliente</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f3f3f3;
+        }
+        .container {
+            max-width: 500px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 15px;
+            background-color: #fff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+            font-size: 16px;
+        }
+        button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            width: 100%;
+            background-color: #0097b2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+        button:hover {
+            background-color: #007a8f;
+        }
+        .message {
+            margin-top: 20px;
+            font-weight: 500;
+            text-align: center;
+            font-size: 17px;
+            color: #333;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        #copyButton {
+            display: none;
+            background-color: #4CAF50;
+        }
+        #copyButton:hover {
+            background-color: #3b8d40;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Avaliação do Cliente</h2>
+
+        <label for="storeName">Nome da Loja:</label>
+        <input id="storeName" type="text" placeholder="Ex: Boiasnet" value="Boiasnet">
+
+        <label for="rating">Selecione a avaliação:</label>
+        <select id="rating">
+            <option value="positivo">Positivo 😀</option>
+            <option value="neutro">Neutro 😐</option>
+            <option value="negativo">Negativo 😞</option>
+        </select>
+
+        <button onclick="generateMessage()">Gerar Mensagem</button>
+        <div class="message" id="message"></div>
+        <button id="copyButton" onclick="copyMessage()">📋 Copiar mensagem</button>
+    </div>
+
+    <script>
+        function generateMessage() {
+            const loja = document.getElementById('storeName').value || "nossa loja";
+            const rating = document.getElementById('rating').value;
+            const messageBox = document.getElementById('message');
+            const copyBtn = document.getElementById('copyButton');
+
+            // 5 mensagens POSITIVAS
+            const mensagensPositivas = [
+                `🎉 Nós da ${loja} agradecemos imensamente pela sua avaliação positiva! Saber que você ficou satisfeito é o que nos motiva a continuar entregando o melhor. Esperamos te ver novamente em breve, temos muitas novidades chegando! 💙`,
+                `💪 Ficamos muito felizes com seu feedback positivo! A equipe da ${loja} trabalha com dedicação todos os dias para oferecer qualidade e confiança. Continue acompanhando nossas ofertas, você vai adorar o que vem por aí! 🚀`,
+                `😍 Agradecemos de coração por escolher a ${loja}. É uma alegria enorme saber que você gostou da sua compra! Volte sempre — novos produtos e promoções incríveis estão te esperando! 🙌`,
+                `🙌 Que felicidade saber que você teve uma ótima experiência! A ${loja} fica muito grata por sua confiança. Continue conosco, porque sempre teremos algo especial preparado pra você! ✨`,
+                `💙 Muito obrigado por confiar na ${loja}! Seu apoio faz toda a diferença. Esperamos te surpreender cada vez mais nas próximas compras. Aproveite e confira nossas novidades da semana! 🛒`
+            ];
+
+            // 5 mensagens NEUTRAS
+            const mensagensNeutras = [
+                `🙂 Agradecemos pela sua avaliação! A equipe da ${loja} está sempre buscando melhorar para tornar sua próxima experiência ainda melhor. Fique de olho nas novidades — estamos preparando muitas surpresas! 👀`,
+                `💡 Obrigado por compartilhar sua opinião! Na ${loja}, cada comentário conta e nos ajuda a crescer. Esperamos te impressionar positivamente na sua próxima compra! 💪`,
+                `🤝 Nós da ${loja} agradecemos por confiar em nosso trabalho. Mesmo com uma experiência neutra, queremos evoluir e te oferecer algo ainda melhor da próxima vez! 🚀`,
+                `📦 Agradecemos por comprar conosco! Na ${loja}, nosso foco é a sua satisfação. Vamos seguir melhorando em cada detalhe para conquistar 5 estrelas na sua próxima compra. ⭐`,
+                `💬 Obrigado por avaliar sua experiência! Na ${loja}, cada cliente é único e queremos sempre superar suas expectativas. Esperamos te ver novamente em breve! 🙌`
+            ];
+
+            // 5 mensagens NEGATIVAS
+            const mensagensNegativas = [
+                `😔 Sentimos muito por não termos atendido suas expectativas dessa vez. A equipe da ${loja} leva seu feedback muito a sério e já está buscando melhorias. Esperamos ter uma nova chance de te surpreender positivamente em breve! 💪`,
+                `🙏 Lamentamos pelo ocorrido e agradecemos por compartilhar sua experiência. Na ${loja}, cada crítica é uma oportunidade de evolução. Prometemos fazer melhor na próxima! 💙`,
+                `💬 Ficamos tristes por saber que sua experiência não foi perfeita, mas gratos por nos avisar. A ${loja} está comprometida em corrigir qualquer falha e oferecer o atendimento que você merece. 🤝`,
+                `💭 Pedimos desculpas por qualquer inconveniente. Seu feedback é essencial para que a ${loja} continue melhorando. Esperamos reconquistar sua confiança na próxima compra. 🙏`,
+                `📦 Sentimos muito pela experiência negativa, mas agradecemos pela sinceridade. A ${loja} já está tomando medidas para resolver isso. Dê-nos uma nova chance — queremos te surpreender de forma positiva! 🌟`
+            ];
+
+            let mensagemEscolhida = "";
+
+            if (rating === "positivo") {
+                mensagemEscolhida = mensagensPositivas[Math.floor(Math.random() * mensagensPositivas.length)];
+                messageBox.style.color = "#009900";
+            } else if (rating === "neutro") {
+                mensagemEscolhida = mensagensNeutras[Math.floor(Math.random() * mensagensNeutras.length)];
+                messageBox.style.color = "#ffaa00";
+            } else {
+                mensagemEscolhida = mensagensNegativas[Math.floor(Math.random() * mensagensNegativas.length)];
+                messageBox.style.color = "#cc0000";
+            }
+
+            messageBox.innerText = mensagemEscolhida;
+            copyBtn.style.display = "block";
+        }
+
+        function copyMessage() {
+            const message = document.getElementById('message').innerText;
+            if (!message) return;
+            navigator.clipboard.writeText(message).then(() => {
+                const btn = document.getElementById('copyButton');
+                btn.innerText = "✅ Copiado!";
+                setTimeout(() => { btn.innerText = "📋 Copiar mensagem"; }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simulador de Custos — Shopee (funcionando)</title>
+  <style>
+    :root{font-family:Inter, system-ui, Arial, sans-serif}
+    body{margin:0;background:#f5f7fb;color:#1f2d3d;padding:24px;display:flex;justify-content:center}
+    .card{width:100%;max-width:920px;background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(6,15,28,0.06);padding:20px}
+    h1{margin:0 0 10px;font-size:20px}
+    label{display:block;font-size:13px;margin:10px 0 6px}
+    input, select{width:100%;padding:10px;border-radius:8px;border:1px solid #e6e9f0;font-size:14px}
+    .row{display:flex;gap:10px}
+    .half{flex:1}
+    .actions{display:flex;gap:10px;margin-top:12px}
+    button{background:#0070f3;color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer}
+    button.ghost{background:#eef2ff;color:#172554}
+    .summary{padding:12px;border-radius:10px;background:#fbfbff;border:1px solid #eef1ff;margin-top:16px}
+    .line{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #eef2ff}
+    .line:last-child{border-bottom:0}
+    .big{font-size:18px;font-weight:700}
+    .small{font-size:12px;color:#55607a}
+    .note{font-size:13px;color:#6b7280;margin-top:8px}
+    @media (max-width:880px){.row{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Simulador de Custos — Shopee</h1>
+
+    <label>Preço de venda por unidade (R$)</label>
+    <input id="price" type="number" step="0.01" value="100.00">
+
+    <div class="row">
+      <div class="half">
+        <label>Custo do produto (R$)</label>
+        <input id="cost" type="number" step="0.01" value="40.00">
+      </div>
+      <div class="half">
+        <label>Frete pago pelo vendedor (R$)</label>
+        <input id="shippingCost" type="number" step="0.01" value="10.00">
+      </div>
+    </div>
+
+    <label>Outros custos (embalagem, logística, devolução) (R$)</label>
+    <input id="otherCosts" type="number" step="0.01" value="5.00">
+
+    <div class="row">
+      <div class="half">
+        <label>Participa do Programa Frete Grátis?</label>
+        <select id="useFreeShippingProgram">
+          <option value="no">Não</option>
+          <option value="yes">Sim</option>
+        </select>
+      </div>
+      <div class="half">
+        <label>Tem campanha/assinatura com taxa diferenciada?</label>
+        <select id="useSpecialPlan">
+          <option value="no">Não</option>
+          <option value="yes">Sim</option>
+        </select>
+      </div>
+    </div>
+
+    <label>Configurações de taxas (edite conforme seu contrato)</label>
+    <div class="row">
+      <input id="baseCommissionPercent" type="number" step="0.01" value="14.00" placeholder="Comissão base (%)">
+      <input id="freeShippingExtraPercent" type="number" step="0.01" value="6.00" placeholder="Acréscimo Frete Grátis (%)">
+    </div>
+
+    <div class="row" style="margin-top:8px">
+      <input id="fixedItemFee" type="number" step="0.01" value="4.00" placeholder="Taxa fixa por item (R$)">
+      <input id="transactionPercent" type="number" step="0.01" value="2.00" placeholder="Taxa de transação (%)">
+    </div>
+
+    <div class="actions">
+      <button id="calcBtn">Calcular</button>
+      <button id="saveBtn" class="ghost">Salvar</button>
+      <button id="resetBtn" class="ghost">Resetar</button>
+    </div>
+
+    <div class="summary" id="summary">
+      <div class="line"><div class="small">Preço unitário</div><div id="outPrice">R$ 0,00</div></div>
+      <div class="line"><div class="small">Comissão Shopee</div><div id="outCommission">R$ 0,00</div></div>
+      <div class="line"><div class="small">Taxa fixa por item</div><div id="outFixedFee">R$ 0,00</div></div>
+      <div class="line"><div class="small">Taxa de transação</div><div id="outTransaction">R$ 0,00</div></div>
+      <div class="line"><div class="small">Frete (vendedor)</div><div id="outShipping">R$ 0,00</div></div>
+      <div class="line"><div class="small">Outros custos</div><div id="outOther">R$ 0,00</div></div>
+      <div class="line big"><div>Recebido líquido estimado</div><div id="outNet">R$ 0,00</div></div>
+      <div class="line"><div class="small">Lucro (líquido - custo)</div><div id="outProfit">R$ 0,00</div></div>
+      <div class="line"><div class="small">Margem sobre venda</div><div id="outMargin">0%</div></div>
+    </div>
+
+    <p class="note">Observação: valores padrão são aproximações — ajuste os campos de comissão e tarifas conforme o contrato da sua conta Shopee. Se algo ainda estiver errado, o simulador mostra os valores no resumo para depuração.</p>
+  </div>
+
+  <script>
+    // Utilitários
+    const $ = id => document.getElementById(id);
+    const money = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // Carrega configurações do localStorage
+    function loadSettings(){
+      try{
+        const s = JSON.parse(localStorage.getItem('shopee-sim-settings') || '{}');
+        if(s && Object.keys(s).length){
+          ['price','cost','shippingCost','otherCosts','useFreeShippingProgram','useSpecialPlan','baseCommissionPercent','freeShippingExtraPercent','fixedItemFee','transactionPercent'].forEach(k=>{ if(s[k]!==undefined && $(k)) $(k).value = s[k]; });
+        }
+      }catch(e){console.warn('loadSettings error',e)}
+    }
+
+    function saveSettings(){
+      const keys = ['price','cost','shippingCost','otherCosts','useFreeShippingProgram','useSpecialPlan','baseCommissionPercent','freeShippingExtraPercent','fixedItemFee','transactionPercent'];
+      const s = {};
+      keys.forEach(k=>{ if($(k)) s[k] = $(k).value; });
+      localStorage.setItem('shopee-sim-settings', JSON.stringify(s));
+      alert('Configurações salvas localmente.');
+    }
+
+    function resetDefaults(){
+      if(confirm('Resetar para os valores padrão?')){
+        localStorage.removeItem('shopee-sim-settings'); location.reload();
+      }
+    }
+
+    function calculate(){
+      // Ler entradas
+      const price = parseFloat($('price').value) || 0;
+      const cost = parseFloat($('cost').value) || 0;
+      const shippingCost = parseFloat($('shippingCost').value) || 0;
+      const otherCosts = parseFloat($('otherCosts').value) || 0;
+      const useFree = $('useFreeShippingProgram').value === 'yes';
+      const baseCommissionPercent = parseFloat($('baseCommissionPercent').value) || 0;
+      const freeShippingExtra = parseFloat($('freeShippingExtraPercent').value) || 0;
+      let fixedItemFee = parseFloat($('fixedItemFee').value) || 0;
+      const transactionPercent = parseFloat($('transactionPercent').value) || 0;
+
+      // Ajustes/validações
+      // Exemplo regra: se price muito baixo cobrar metade do preço como taxa fixa
+      if(price > 0 && price < 8){
+        // Só aplica se a taxa fixa configurada for maior que half-price
+        fixedItemFee = Math.min(fixedItemFee, price / 2);
+      }
+
+      // Comissão percentual
+      let commissionPercent = baseCommissionPercent;
+      if(useFree) commissionPercent = commissionPercent + freeShippingExtra;
+
+      const commission = (commissionPercent / 100) * price;
+      const transactionFee = (transactionPercent / 100) * price;
+
+      // Limite/teto de comissão (exemplo: máximo R$100) - ajuste se quiser
+      const commissionCap = 100.00; // alterar se necessário
+      const commissionCapped = Math.min(commission, commissionCap);
+
+      // Valor líquido recebido pelo vendedor:
+      // preço - comissão - fixedItemFee - transactionFee - frete (se vendedor paga) - outros custos
+      const net = price - commissionCapped - fixedItemFee - transactionFee - shippingCost - otherCosts;
+      const profit = net - cost;
+      const margin = price > 0 ? (profit / price) * 100 : 0;
+
+      // Atualizar UI
+      $('outPrice').innerText = money(price);
+      $('outCommission').innerText = money(commissionCapped) + (commissionCapped !== commission ? ' (cap aplicado)' : '');
+      $('outFixedFee').innerText = money(fixedItemFee);
+      $('outTransaction').innerText = money(transactionFee);
+      $('outShipping').innerText = money(shippingCost);
+      $('outOther').innerText = money(otherCosts);
+      $('outNet').innerText = money(net);
+      $('outProfit').innerText = money(profit);
+      $('outMargin').innerText = margin.toFixed(2) + '%';
+
+      return { price, commission: commissionCapped, fixedItemFee, transactionFee, shippingCost, otherCosts, net, profit };
+    }
+
+    // Event listeners
+    window.addEventListener('load', () => { loadSettings(); calculate(); });
+    $('calcBtn').addEventListener('click', calculate);
+    $('saveBtn').addEventListener('click', saveSettings);
+    $('resetBtn').addEventListener('click', resetDefaults);
+
+    // recalcula ao alterar qualquer input para feedback imediato
+    document.querySelectorAll('input,select').forEach(el => el.addEventListener('input', () => calculate()));
+  </script>
+</body>
+</html>
