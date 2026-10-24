@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PDV de vendas</title>
+<title>Sistema Vendas Academia Corpus</title>
 <style>
 :root{--bg:#f4f5f9;--card:#fff;--ink:#14172b;--mute:#6b7089;--line:#e6e8f0;--brand:#4338ca;--brand2:#6d5dfc;--brand-ink:#fff;--soft:#eef0ff;--warn:#d6452f;--ok:#12805c;--shadow:0 1px 2px rgba(20,23,43,.06),0 8px 24px rgba(20,23,43,.06)}
 @media(prefers-color-scheme:dark){:root{--bg:#0e1020;--card:#171a30;--ink:#eceefa;--mute:#9a9fbd;--line:#262a47;--brand:#8b7dff;--brand2:#a99cff;--brand-ink:#0e1020;--soft:#1f2347;--warn:#ff8a70;--ok:#47d1a0;--shadow:none}}
@@ -32,6 +32,7 @@ h2{font-size:1rem;margin:0 0 12px;letter-spacing:-.01em}
 .prod:hover{border-color:var(--brand);transform:translateY(-2px)}
 .prod b{display:block;font-weight:650;margin-bottom:6px}
 .prod span{color:var(--brand);font-weight:700}
+.prod:disabled{opacity:.45;cursor:not-allowed;transform:none}.stk{display:block;font-size:.78rem;color:var(--mute);margin-top:4px}.stk.low{color:var(--warn);font-weight:600}
 .none{color:var(--mute);padding:14px 2px}
 details{margin-top:14px}summary{cursor:pointer;color:var(--mute);font-weight:600}
 .row{display:flex;gap:10px;margin-top:10px}.row>*{flex:1}
@@ -67,13 +68,13 @@ th,td{text-align:left;padding:8px 4px;border-bottom:1px solid var(--line)}th{col
 </head>
 <body>
 <div class="top"><div class="bar">
-  <div class="logo">PDV</div>
+  <div class="logo">Sistema Vendas Academia Corpus</div>
   <span class="pill"><span class="dot" id="dot"></span><span id="stText">Não conectado</span></span>
   <div class="tabs" role="tablist">
     <button role="tab" id="tabV" aria-selected="true">Vender</button>
     <button role="tab" id="tabR" aria-selected="false">Relatório</button>
   </div>
-  <input class="who" id="seller" placeholder="Vendedor" aria-label="Vendedor">
+  <input class="who" id="seller" placeholder="Vendedor (opcional)" aria-label="Vendedor" style="width:190px">
 </div></div>
 
 <main>
@@ -92,8 +93,9 @@ th,td{text-align:left;padding:8px 4px;border-bottom:1px solid var(--line)}th{col
       <h2>Produtos</h2>
       <input id="search" type="search" placeholder="Buscar produto..." aria-label="Buscar produto" autocomplete="off">
       <div class="grid" id="grid"></div>
-      <details><summary>Produto fora do catálogo</summary>
-        <div class="row"><input id="mName" placeholder="Nome"><input id="mPrice" inputmode="decimal" placeholder="Preço"></div>
+      <details><summary>Venda rápida</summary>
+        <input id="mSeller" placeholder="Nome do vendedor" aria-label="Nome do vendedor" style="margin-top:10px">
+        <div class="row"><input id="mName" placeholder="Nome do produto"><input id="mPrice" inputmode="decimal" placeholder="Preço"></div>
         <button class="btn" id="mAdd" style="margin-top:10px">Adicionar</button>
       </details>
     </div>
@@ -168,48 +170,54 @@ async function connect(){
   sheetId=($('sheetUrl').value.match(/\/d\/([\w-]+)/)||[])[1]||'';scriptUrl=$('scriptUrl').value.trim();
   if(!sheetId){setStatus('off','Cole o link da planilha');return}
   try{
-    catalog=(await readTab('Produtos')).map(r=>({name:r[0].trim(),price:num(r[1])})).filter(p=>p.name);
+    catalog=(await readTab('Produtos')).map(r=>({name:r[0].trim(),price:num(r[1]),stock:(r[2]||'').trim()===''?null:num(r[2])})).filter(p=>p.name);
     setStatus('on',`Conectado · ${catalog.length} produtos`+(scriptUrl?'':' · sem script (não grava)'));
     drawGrid();loadReport();
   }catch(e){const m=String(e.message);setStatus('off',m==='privada'?'Planilha não está pública (Compartilhar > Qualquer pessoa com o link)':m.startsWith('http')?'Erro ao ler a planilha ('+m+'). Confira a aba "Produtos"':'Navegador bloqueou a leitura. Abra o PDV por um site (GitHub Pages/Netlify), não pelo arquivo')}
 }
 $('saveCfg').onclick=()=>{store.set('pdv_sheet',$('sheetUrl').value);store.set('pdv_script',$('scriptUrl').value);connect();$('cfg').open=false};
 
+const key=n=>String(n).trim().toLowerCase();
+const soldOf=n=>sales.filter(x=>key(x.produto)===key(n)).reduce((s,x)=>s+x.qtd,0);
+const availOf=p=>p.stock==null?Infinity:p.stock-soldOf(p.name);
+const inCart=n=>cart.filter(i=>key(i.name)===key(n)).reduce((s,i)=>s+i.qty,0);
+function canAdd(n){const p=catalog.find(x=>key(x.name)===key(n));return !p||availOf(p)-inCart(n)>=1}
 function drawGrid(){
   const q=$('search').value.trim().toLowerCase();
   const list=catalog.filter(p=>p.name.toLowerCase().includes(q));
-  $('grid').innerHTML=list.length?list.map((p,i)=>`<button class="prod" data-n="${esc(p.name)}"><b>${esc(p.name)}</b><span>${brl(p.price)}</span></button>`).join(''):`<div class="none">${catalog.length?'Nenhum produto encontrado.':'Conecte a planilha para ver os produtos.'}</div>`;
+  $('grid').innerHTML=list.length?list.map(p=>{const a=availOf(p);const st=p.stock==null?'':a<=0?'<em class="stk low">Esgotado</em>':`<em class="stk${a<=3?' low':''}" style="font-style:normal">Estoque: ${a}</em>`;return `<button class="prod" data-n="${esc(p.name)}"${a<=0?' disabled':''}><b>${esc(p.name)}</b><span>${brl(p.price)}</span>${st}</button>`}).join(''):`<div class="none">${catalog.length?'Nenhum produto encontrado.':'Conecte a planilha para ver os produtos.'}</div>`;
   $('grid').querySelectorAll('.prod').forEach(b=>b.onclick=()=>{const p=catalog.find(x=>x.name===b.dataset.n);addItem(p.name,p.price)});
 }
 $('search').addEventListener('input',drawGrid);
 $('search').addEventListener('keydown',e=>{if(e.key==='Enter'){const q=$('search').value.trim().toLowerCase();const l=catalog.filter(p=>p.name.toLowerCase().includes(q));if(l.length===1){addItem(l[0].name,l[0].price);$('search').value='';drawGrid()}}});
-function addItem(name,price){const f=cart.find(i=>i.name===name&&i.price===price);if(f)f.qty++;else cart.push({name,price,qty:1});say('');render()}
-$('mAdd').onclick=()=>{const n=$('mName').value.trim(),p=num($('mPrice').value);if(!n||p<=0){say('Informe nome e preço.','err');return}addItem(n,p);$('mName').value='';$('mPrice').value=''};
+function addItem(name,price){if(!canAdd(name)){say('Estoque insuficiente para "'+name+'".','err');return}const f=cart.find(i=>i.name===name&&i.price===price);if(f)f.qty++;else cart.push({name,price,qty:1});say('');render()}
+$('mAdd').onclick=()=>{const n=$('mName').value.trim(),p=num($('mPrice').value),v=$('mSeller').value.trim()||$('seller').value.trim();if(!v){say('Informe o nome do vendedor.','err');$('mSeller').focus();return}if(!n||p<=0){say('Informe nome e preço.','err');return}$('seller').value=v;$('mSeller').value=v;store.set('pdv_seller',v);addItem(n,p);$('mName').value='';$('mPrice').value=''};
 
 document.querySelectorAll('#pay button').forEach(b=>b.onclick=()=>{payment=b.textContent;document.querySelectorAll('#pay button').forEach(x=>x.setAttribute('aria-pressed',x===b));render()});
 $('disc').addEventListener('input',render);
-$('seller').addEventListener('input',()=>{store.set('pdv_seller',$('seller').value);render()});
+$('seller').addEventListener('input',()=>{$('mSeller').value=$('seller').value;store.set('pdv_seller',$('seller').value);render()});
+$('mSeller').addEventListener('input',()=>{$('seller').value=$('mSeller').value;store.set('pdv_seller',$('mSeller').value);render()});
 
 const subtotal=()=>cart.reduce((s,i)=>s+i.price*i.qty,0);
 const discount=()=>Math.min(num($('disc').value),subtotal());
 function render(){
   $('cart').innerHTML=cart.map((i,k)=>`<div class="line"><div class="nm">${esc(i.name)}<small>${brl(i.price)} cada</small></div><div class="stp"><button data-k="${k}" data-d="-1" aria-label="Menos">−</button><i>${i.qty}</i><button data-k="${k}" data-d="1" aria-label="Mais">+</button></div><b>${brl(i.price*i.qty)}</b><button class="x" data-k="${k}" data-d="0" aria-label="Remover">✕</button></div>`).join('');
-  $('cart').querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,d=+b.dataset.d;if(d===0||cart[k].qty+d<1)cart.splice(k,1);else cart[k].qty+=d;render()});
+  $('cart').querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,d=+b.dataset.d;if(d===0||cart[k].qty+d<1)cart.splice(k,1);else if(d>0&&!canAdd(cart[k].name)){say('Estoque insuficiente.','err')}else cart[k].qty+=d;render()});
   $('empty').style.display=cart.length?'none':'block';
   $('sub').textContent=brl(subtotal());$('total').textContent=brl(subtotal()-discount());
-  $('finish').disabled=!(cart.length&&payment&&$('seller').value.trim());
+  $('finish').disabled=!(cart.length&&payment);
 }
 
 $('finish').onclick=async()=>{
   if(!scriptUrl){say('Cole a URL do Apps Script em "Conexão" para gravar.','err');return}
-  const sub=subtotal(),d=discount(),id='V'+Date.now(),seller=$('seller').value.trim(),now=new Date();
+  const sub=subtotal(),d=discount(),id='V'+Date.now(),seller=$('seller').value.trim()||'Venda rápida',now=new Date();
   const stamp=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${now.toTimeString().slice(0,8)}`;
   const rows=cart.map(i=>{const l=i.price*i.qty,ld=sub?d*l/sub:0;return{venda:id,vendedor:seller,produto:i.name,qtd:i.qty,preco:i.price,desconto:+ld.toFixed(2),total:+(l-ld).toFixed(2),pagamento:payment}});
   $('finish').disabled=true;say('Salvando…');
   try{
     await fetch(scriptUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({rows})});
     rows.forEach(r=>sales.push({data:stamp,venda:r.venda,vendedor:r.vendedor,produto:r.produto,qtd:r.qtd,desc:r.desconto,total:r.total,pag:r.pagamento}));
-    cart=[];$('disc').value='';say('Venda registrada!','ok');render();drawReport();
+    cart=[];$('disc').value='';say('Venda registrada!','ok');render();drawReport();drawGrid();
     setTimeout(loadReport,4000);
   }catch(e){say('Não consegui salvar. Verifique a conexão e o script.','err');render()}
 };
@@ -220,7 +228,7 @@ async function loadReport(){
   if(!sheetId)return;
   try{
     const server=(await readTab('Vendas')).map(r=>({data:r[0],venda:r[1],vendedor:r[2],produto:r[3],qtd:num(r[4]),desc:num(r[6]),total:num(r[7]),pag:r[8]}));
-    sales=server;drawReport();
+    sales=server;drawReport();drawGrid();
   }catch(e){drawReport()}
 }
 function rank(id,list,key,val,fmt){
@@ -244,7 +252,7 @@ $('tabV').onclick=()=>tab(false);$('tabR').onclick=()=>tab(true);
 
 $('sheetUrl').value=store.get('pdv_sheet')||DEFAULT_SHEET_URL;
 $('scriptUrl').value=store.get('pdv_script')||DEFAULT_SCRIPT_URL;
-$('seller').value=store.get('pdv_seller');
+$('seller').value=store.get('pdv_seller');$('mSeller').value=$('seller').value;
 if($('sheetUrl').value){setStatus('','Conectando…');connect()}else{$('cfg').open=true;setStatus('off','Cole o link da planilha em "Conexão"')}
 render();drawGrid();
 </script>
